@@ -1,6 +1,6 @@
-require('./preloadIpc');
-let {clipboard, nativeImage} = require('electron');
-let {s, sa, delay, download} = require('./util');
+import './preloadIpc';
+import {clipboard, nativeImage} from 'electron';
+import {s, sa, delay, download} from './util';
 import {parseMsg} from './parseMsg';
 import {replyMsg} from './replyMsg';
 import {Clipboard} from 'electron';
@@ -17,6 +17,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     detectPage();
 });
+
+function detectPage() {
+    console.log("detectPage..........");
+    let ps = [
+        detectCache(), // 协助跳转
+        detectLogin(),
+        detectChat()
+    ];
+
+    // 同时判断login和chat 判断完成则同时释放
+    Promise.race(ps)
+        .then((data: any) => {
+            ps.forEach((p) => (<any>p).cancel());
+
+            let {page, qrcode} = data;
+            console.log(`目前处于${page}页面`);
+
+            if (page === 'login') {
+                download(qrcode);
+            } else if (page === 'chat') {
+                autoReply();
+            }
+        });
+}
 
 async function autoReply() {
     while (true) { // 保持回复消息
@@ -40,6 +64,7 @@ async function autoReply() {
 
 async function detectMsg() {
     // 重置回"文件传输助手" 以能接收未读红点
+    // @ts-ignore
     s('img[src*=filehelper]').closest('.chat_item').click();
 
     let reddot;
@@ -50,6 +75,7 @@ async function detectMsg() {
     }
 
     let item = reddot.closest('.chat_item');
+    // @ts-ignore
     item.click();
 
     await delay(100);
@@ -62,23 +88,6 @@ async function detectMsg() {
 
     let msg = parseMsg($msg);
     return msg;
-}
-
-async function clickSend(opt: any) {
-    if (opt.text) {
-        s('.btn_send').click();
-    } else if (opt.image) {
-        // fixme: 超时处理
-        while (true) {
-            await delay(300);
-            let btn = s('.dialog_ft .btn_primary');
-            if (btn) {
-                btn.click(); // 持续点击
-            } else {
-                return;
-            }
-        }
-    }
 }
 
 // 借用clipboard 实现输入文字 更新ng-model=EditAreaCtn
@@ -99,6 +108,7 @@ function pasteMsg(opt: any) {
     }
     if (opt.html) (<any>clipboard).writeHtml(opt.html);
     if (opt.text) clipboard.writeText(opt.text);
+    // @ts-ignore
     s('#editArea').focus();
     document.execCommand('paste');
 
@@ -107,27 +117,23 @@ function pasteMsg(opt: any) {
     clipboard.writeText(oldText);
 }
 
-function detectPage() {
-    let ps = [
-        detectCache(), // 协助跳转
-        detectLogin(),
-        detectChat()
-    ];
-
-    // 同时判断login和chat 判断完成则同时释放
-    Promise.race(ps)
-        .then((data: any) => {
-            ps.forEach((p) => (<any>p).cancel());
-
-            let {page, qrcode} = data;
-            console.log(`目前处于${page}页面`);
-
-            if (page === 'login') {
-                download(qrcode);
-            } else if (page === 'chat') {
-                autoReply();
+async function clickSend(opt: any) {
+    if (opt.text) {
+        // @ts-ignore
+        s('.btn_send').click();
+    } else if (opt.image) {
+        // fixme: 超时处理
+        while (true) {
+            await delay(300);
+            let btn = s('.dialog_ft .btn_primary');
+            if (btn) {
+                // @ts-ignore
+                btn.click(); // 持续点击
+            } else {
+                return;
             }
-        });
+        }
+    }
 }
 
 // 需要定制promise 提供cancel方法
@@ -165,9 +171,11 @@ function detectLogin() {
             // 第1次src https://res.wx.qq.com/a/wx_fed/webwx/res/static/img/2z6meE1.gif
             // 第2次src https://login.weixin.qq.com/qrcode/IbAG40QD6A==
             let img = s('.qrcode img');
+            // @ts-ignore
             if (img && img.src.endsWith('==')) {
                 return {
                     page: 'login',
+                    // @ts-ignore
                     qrcode: img.src
                 };
             }
@@ -191,7 +199,10 @@ function detectCache() {
             await delay(300);
 
             let btn = s('.association .button_default');
-            if (btn) btn.click(); // 持续点击
+            if (btn) {
+                // @ts-ignore
+                btn.click();
+            } // 持续点击
         }
     })();
 

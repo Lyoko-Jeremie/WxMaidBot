@@ -1,7 +1,5 @@
-import Session = Electron.Session;
-
-require('./runnerIpc')
-import {app, session, ipcMain, BrowserWindow} from "electron";
+import './runnerIpc';
+import {app, session, ipcMain, BrowserWindow, Session} from "electron";
 import {tmpdir} from "os";
 import {join} from "path";
 import fs from "fs";
