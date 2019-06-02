@@ -4,22 +4,20 @@
 /**
  * Module dependencies
  */
-
-var Emitter = require('events').EventEmitter;
+import {EventEmitter as Emitter} from 'events';
+// var Emitter = require('events').EventEmitter;
 // var sliced = require('sliced');
 
 /**
  * Export `ipc`
  */
 
-module.exports = ipc;
-
+// module.exports = ipc;
 /**
  * Initialize `ipc`
  */
-
-function ipc(process) {
-    var emitter = new Emitter();
+export function ipc(process: any) {
+    var emitter: any = new Emitter();
     var emit = emitter.emit;
 
     // no parent
@@ -27,7 +25,7 @@ function ipc(process) {
         return emitter;
     }
 
-    process.on('message', function (data) {
+    process.on('message', function (data: any) {
         // emit.apply(emitter, sliced(data));
         emit.apply(emitter, [...data]);
     });
@@ -37,7 +35,7 @@ function ipc(process) {
             // process.send(sliced(arguments));
             process.send(Array.from(arguments));
         }
-    }
+    };
 
     return emitter;
 }
