@@ -19,25 +19,25 @@ module.exports = ipc;
  */
 
 function ipc(process) {
-  var emitter = new Emitter();
-  var emit = emitter.emit;
+    var emitter = new Emitter();
+    var emit = emitter.emit;
 
-  // no parent
-  if (!process.send) {
-    return emitter;
-  }
-
-  process.on('message', function(data) {
-    // emit.apply(emitter, sliced(data));
-    emit.apply(emitter, [...data]);
-  });
-
-  emitter.emit = function() {
-    if(process.connected){
-      // process.send(sliced(arguments));
-      process.send(Array.from(arguments));
+    // no parent
+    if (!process.send) {
+        return emitter;
     }
-  }
 
-  return emitter;
+    process.on('message', function (data) {
+        // emit.apply(emitter, sliced(data));
+        emit.apply(emitter, [...data]);
+    });
+
+    emitter.emit = function () {
+        if (process.connected) {
+            // process.send(sliced(arguments));
+            process.send(Array.from(arguments));
+        }
+    }
+
+    return emitter;
 }
