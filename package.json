@@ -12,7 +12,8 @@
   ],
   "main": "src",
   "scripts": {
-    "start": "node .",
+    "start": "npm run build & npm run run",
+    "build": "tsc",
     "run": "node ./dist/index.js"
   },
   "dependencies": {
