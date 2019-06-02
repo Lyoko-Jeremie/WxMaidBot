@@ -21,6 +21,14 @@ ipcMain.on('renderer', (e: any, k: string, args: any) => {
     console[k]('renderer', k, args)
 });
 
+ipcMain.on('ipcSendBackInfo', (e: any, obj: any) => {
+    // @ts-ignore
+    console[k]('ipcSendBackInfo', JSON.stringify(obj));
+
+    // TODO
+
+});
+
 app.on('activate', () => {
     if (win) win.show()
 });

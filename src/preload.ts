@@ -4,6 +4,7 @@ import {s, sa, delay, download} from './util';
 import {parseMsg} from './parseMsg';
 import {replyMsg} from './replyMsg';
 import {Clipboard} from 'electron';
+import {ipcSendBackInfo} from "./preloadIpc";
 
 // 禁用微信网页绑定的beforeunload
 // 导致页面无法正常刷新和关闭
@@ -37,9 +38,34 @@ function detectPage() {
             if (page === 'login') {
                 download(qrcode);
             } else if (page === 'chat') {
-                autoReply();
+                // autoReply();
+                onChat();
             }
         });
+}
+
+async function onChat() {
+    while (true) { // 保持回复消息
+        try {
+            let msg = await detectMsg();
+            console.log('解析得到msg', JSON.stringify(msg));
+            ipcSendBackInfo({
+                type: 'msg',
+                msg: msg,
+            });
+
+            // let reply = await replyMsg(msg);
+            // console.log('reply', JSON.stringify(reply));
+            //
+            // if (reply) {
+            //     // continue // test: 不作回复
+            //     pasteMsg(reply);
+            //     await clickSend(reply);
+            // }
+        } catch (err) {
+            // console.error('自动回复出现err', err);
+        }
+    }
 }
 
 async function autoReply() {
@@ -71,8 +97,10 @@ async function detectMsg() {
     while (true) {
         await delay(100);
         reddot = s('.web_wechat_reddot, .web_wechat_reddot_middle');
-        if (reddot) break
+        if (reddot) break;
     }
+
+    // TODO filter the chat by name,  only get the special chat
 
     let item = reddot.closest('.chat_item');
     // @ts-ignore

@@ -9,3 +9,10 @@ import {ipcRenderer} from 'electron';
         ipcRenderer.send('renderer', k, args);
     }
 });
+
+export function ipcSendBackInfo(o: any) {
+    ipcRenderer.send('ipcSendBackInfo', o);
+}
+
+
+
