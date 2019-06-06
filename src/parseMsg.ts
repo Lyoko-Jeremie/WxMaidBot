@@ -36,11 +36,11 @@ function parseMsg($msg: any) {
     Object.assign(msg, {
         from, room
     });
-    debug('来自', from, room);  // 这里的nickname会被remark覆盖
+    // debug('来自', from, room);  // 这里的nickname会被remark覆盖
 
     if ($msg.is('.message_system')) {
         let ctn = $msg.find('.content').text();
-        debug('接收', '系统标记', ctn);
+        // debug('接收', '系统标记', ctn);
         Object.assign(msg, {
             style: 'system',
             text: ctn
@@ -49,30 +49,25 @@ function parseMsg($msg: any) {
         let mat;
         if (ctn === '收到红包，请在手机上查看' ||
             ctn === 'Red packet received. View on phone.') {
-            // text = '发毛红包'
             Object.assign(msg, {
                 type: 'red packet'
             });
         } else if (ctn === '位置共享已经结束' ||
             ctn === 'Real-time Location session ended.') {
-            // text = '位置共享已经结束'
             Object.assign(msg, {
                 type: 'real-time location ended'
             });
         } else if (ctn === '实时对讲已经结束') {
-            // text = '实时对讲已经结束'
             Object.assign(msg, {
                 type: 'real-time voice ended'
             });
         } else if (mat = ctn.match(/"(.+)"邀请"(.+)"加入了群聊/)) {
-            // text = '加毛人'
             Object.assign(msg, {
                 type: 'new member',
                 by: mat[1],
                 who: mat[2]
             });
         } else if (mat = ctn.match(/"(.+)"与群里其他人都不是微信朋友关系，请注意隐私安全/)) {
-            // text = '加毛人'
             Object.assign(msg, {
                 type: 'member is stranger',
                 who: mat[1]
@@ -83,7 +78,6 @@ function parseMsg($msg: any) {
                 by: mat[1]
             });
         } else if (mat = ctn.match(/(.+)(撤回了一条消息| withdrew a message)/)) {
-            // text = '撤你妹'
             Object.assign(msg, {
                 type: 'recall',
                 by: mat[1]
@@ -97,17 +91,14 @@ function parseMsg($msg: any) {
         }
     } else if ($msg.is('.emoticon')) { // 用户自定义表情
         let src = $msg.find('.msg-img').prop('src');
-        debug('接收', 'emoticon', src);
-        // reply.text = '发毛表情'
+        // debug('接收', 'emoticon', src);
         Object.assign(msg, {
             type: 'emoticon',
             src
         });
     } else if ($msg.is('.picture')) {
         let src = $msg.find('.msg-img').prop('src');
-        debug('接收', 'picture', src);
-        // reply.text = '发毛图片'
-        // reply.image = join(__dirname, '../fuck.jpeg')
+        // debug('接收', 'picture', src);
         Object.assign(msg, {
             type: 'picture',
             src
@@ -115,8 +106,7 @@ function parseMsg($msg: any) {
     } else if ($msg.is('.location')) {
         let src = $msg.find('.img').prop('src');
         let desc = $msg.find('.desc').text();
-        debug('接收', 'location', desc);
-        // reply.text = desc
+        // debug('接收', 'location', desc);
         Object.assign(msg, {
             type: 'location',
             src, desc
@@ -126,8 +116,7 @@ function parseMsg($msg: any) {
         let size = $msg.find('span:first').text();
         let $download = $msg.find('a[download]'); // 可触发下载
         let src = $download.prop('href');
-        debug('接收', 'attach', title, size);
-        // reply.text = title + '\n' + size
+        // debug('接收', 'attach', title, size);
         Object.assign(msg, {
             type: 'attach',
             title, size, src
@@ -135,16 +124,14 @@ function parseMsg($msg: any) {
     } else if ($msg.is('.microvideo')) {
         let poster = $msg.find('img').prop('src'); // 限制
         let src = $msg.find('video').prop('src'); // 限制
-        debug('接收', 'microvideo', poster);
-        // reply.text = '发毛小视频'
+        // debug('接收', 'microvideo', poster);
         Object.assign(msg, {
             type: 'microvideo',
             poster, src
         });
     } else if ($msg.is('.video')) {
         let poster = $msg.find('.msg-img').prop('src'); // 限制
-        debug('接收', 'video', poster);
-        // reply.text = '发毛视频'
+        // debug('接收', 'video', poster);
         Object.assign(msg, {
             type: 'video',
             poster
@@ -153,8 +140,7 @@ function parseMsg($msg: any) {
         $msg[0].click();
         let duration = parseInt($msg.find('.duration').text());
         let src = $('#jp_audio_1').prop('src'); // 认证限制
-        debug('接收', 'voice', `${duration}s`, src);
-        // reply.text = '发毛语音'
+        // debug('接收', 'voice', `${duration}s`, src);
         Object.assign(msg, {
             type: 'voice',
             duration, src
@@ -163,8 +149,7 @@ function parseMsg($msg: any) {
         let name = $msg.find('.display_name').text();
         let wxid = $msg.find('.signature').text(); // 微信注释掉了
         let img = $msg.find('.img').prop('src'); // 认证限制
-        debug('接收', 'card', name, wxid);
-        // reply.text = name + '\n' + wxid
+        // debug('接收', 'card', name, wxid);
         Object.assign(msg, {
             type: 'card',
             name, img
@@ -175,8 +160,7 @@ function parseMsg($msg: any) {
         let title = $msg.find('.title').text();
         let desc = $msg.find('.desc').text();
         let img = $msg.find('.cover').prop('src'); // 认证限制
-        debug('接收', 'link', title, desc, url);
-        // reply.text = title + '\n' + url
+        // debug('接收', 'link', title, desc, url);
         Object.assign(msg, {
             type: 'app',
             url, title, desc, img
@@ -200,39 +184,33 @@ function parseMsg($msg: any) {
         if (ctn === '[收到了一个表情，请在手机上查看]' ||
             ctn === '[Send an emoji, view it on mobile]' ||
             ctn === '[Received a sticker. View on phone]') { // 微信表情包
-            // text = '发毛表情'
             Object.assign(msg, {
                 type: 'sticker' // 微信内部表情
             });
         } else if (ctn === '[收到一条微信转账消息，请在手机上查看]' ||
             ctn === '[Received a micro-message transfer message, please view on the phone]' ||
             ctn === '[Received transfer. View on phone.]') {
-            // text = '转毛帐'
             Object.assign(msg, {
                 type: 'transfer'
             });
         } else if (ctn === '[收到一条视频/语音聊天消息，请在手机上查看]' ||
             ctn === '[Receive a video / voice chat message, view it on your phone]' ||
             ctn === '[Received video/voice chat message. View on phone.]') {
-            // text = '聊jj'
             Object.assign(msg, {
                 type: 'video/voice call'
             });
         } else if (ctn === '我发起了实时对讲') {
-            // text = '对讲你妹'
             Object.assign(msg, {
                 type: 'real-time voice'
             });
         } else if (ctn === '该类型暂不支持，请在手机上查看' ||
             ctn === '[收到一条网页版微信暂不支持的消息类型，请在手机上查看]') {
-            // text = '不懂'
             Object.assign(msg, {
                 type: 'not supported'
             });
         } else if (ctn.match(/(.+)发起了位置共享，请在手机上查看/) ||
             ctn.match(/(.+)Initiated location sharing, please check on the phone/) ||
             ctn.match(/(.+)started a real-time location session\. View on phone/)) {
-            // text = '发毛位置共享'
             Object.assign(msg, {
                 type: 'real-time location'
             });
@@ -244,9 +222,7 @@ function parseMsg($msg: any) {
                 text: ctn
             });
         }
-        debug('接收', 'text', ctn);
-        // if (normal && !text.match(/叼|屌|diao|丢你|碉堡/i)) text = ''
-        // reply.text = text
+        // debug('接收', 'text', ctn);
     } else {
         console.log('未成功解析消息', $msg.html());
         Object.assign(msg, {
