@@ -11,7 +11,7 @@ export namespace carTeachStringAnalysis {
         return XRegExp.split(s, '\n').length > 5;
     }
 
-    export function isFinaly(s: string) {
+    export function isFinally(s: string) {
         return XRegExp.test(s, XRegExp.cache(key_string, 'g'));
     }
 

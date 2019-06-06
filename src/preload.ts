@@ -108,7 +108,7 @@ async function onChat() {
                 console.log('msg.forEach');
                 if (carTeachStringAnalysis.checkMessage(T)) {
                     console.log('checkMessage ok');
-                    if (!carTeachStringAnalysis.isFinaly(T)) {
+                    if (!carTeachStringAnalysis.isFinally(T)) {
                         console.log('isFinaly ok');
                         let analysisData: carTeachStringAnalysis.AnalysisInfoType
                             = carTeachStringAnalysis.analysisInfo(T);
