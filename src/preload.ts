@@ -4,8 +4,10 @@ import {s, sa, delay, download} from './util';
 import {parseMsg} from './parseMsg';
 import {replyMsg} from './replyMsg';
 import {Clipboard} from 'electron';
+import {isNil} from 'lodash';
 import {ipcSendBackInfo} from "./preloadIpc";
 import {angularScope, angularSelector} from "./angularJsHelper";
+import {carTeachStringAnalysis} from "./messageAnalyzer";
 
 console.log(remote);
 
@@ -51,6 +53,15 @@ function detectPage() {
 }
 
 
+class WaitingSendInfo {
+    constructor(
+        public analysisInfo: carTeachStringAnalysis.AnalysisInfoType,
+        public segmentInfo: carTeachStringAnalysis.SegmentInfoType,
+        public s: string
+    ) {
+    }
+}
+
 async function onChat() {
     while (true) { // 保持回复消息
         try {
@@ -90,6 +101,57 @@ async function onChat() {
             }
 
             console.log(msg);
+
+            let waitingSendList: WaitingSendInfo[] = [];
+            msg.forEach(IT => {
+                let T = IT.text;
+                console.log('msg.forEach');
+                if (carTeachStringAnalysis.checkMessage(T)) {
+                    console.log('checkMessage ok');
+                    if (!carTeachStringAnalysis.isFinaly(T)) {
+                        console.log('isFinaly ok');
+                        let analysisData: carTeachStringAnalysis.AnalysisInfoType
+                            = carTeachStringAnalysis.analysisInfo(T);
+                        // let [lines, infoTypes] = analysisData;
+                        // console.log('infoTypes', infoTypes);
+                        // infoTypes.forEach((L: any) => {
+                        //     console.log(JSON.stringify(L, null, 0));
+                        // });
+
+                        let ndCheck = carTeachStringAnalysis.checkIsNextDay(analysisData);
+                        console.log('ndCheck', ndCheck);
+                        if (ndCheck !== -1) {
+                            if (ndCheck) {
+                                let segmentData: carTeachStringAnalysis.SegmentInfoType
+                                    = carTeachStringAnalysis.getSegmentInfo(analysisData);
+                                let [theDate, segmentInfoList] = segmentData;
+                                console.log('theDate', theDate);
+                                if (!isNil(theDate)) {
+                                    let line = carTeachStringAnalysis.checkAndFindTargetOrLastSegment(
+                                        segmentInfoList,
+                                        16, 18
+                                    );
+                                    analysisData = carTeachStringAnalysis.addKeyString(analysisData, line);
+                                    analysisData = carTeachStringAnalysis.fixAngerFlagOnTimeLine(analysisData);
+                                    let s = carTeachStringAnalysis.re_construct(analysisData);
+
+                                    waitingSendList.push(new WaitingSendInfo(analysisData, segmentData, s));
+                                    // let opt = {text: s};
+                                    // pasteMsg(opt);
+                                    // await clickSend(opt);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            for (let i = 0; i != waitingSendList.length; ++i) {
+                let w = waitingSendList[i];
+                let opt = {text: w.s};
+                pasteMsg(opt);
+                await clickSend(opt);
+            }
 
         } catch (err) {
             console.error('onChat err', err);
