@@ -1,10 +1,16 @@
 import './preloadIpc';
-import {clipboard, nativeImage} from 'electron';
+import {clipboard, nativeImage, remote} from 'electron';
 import {s, sa, delay, download} from './util';
 import {parseMsg} from './parseMsg';
 import {replyMsg} from './replyMsg';
 import {Clipboard} from 'electron';
 import {ipcSendBackInfo} from "./preloadIpc";
+import {angularScope, angularSelector} from "./angularJsHelper";
+
+console.log(remote);
+
+let messageHistoryStorage: Map<string, Array<any>> = new Map<string, Array<any>>();
+
 
 // 禁用微信网页绑定的beforeunload
 // 导致页面无法正常刷新和关闭
@@ -44,28 +50,85 @@ function detectPage() {
         });
 }
 
+
 async function onChat() {
     while (true) { // 保持回复消息
         try {
-            let msg = await detectMsg();
-            console.log('解析得到msg', JSON.stringify(msg));
-            ipcSendBackInfo({
-                type: 'msg',
-                msg: msg,
-            });
 
-            // let reply = await replyMsg(msg);
-            // console.log('reply', JSON.stringify(reply));
-            //
-            // if (reply) {
-            //     // continue // test: 不作回复
-            //     pasteMsg(reply);
-            //     await clickSend(reply);
-            // }
+            let title = detectCurrentChatTitle();
+            if (!title) {
+                await delay(500);
+                continue;
+            }
+
+            await delay(100);
+            // console.log(title);
+            let mh = messageHistoryStorage.get(title);
+            if (!mh) {
+                mh = [];
+                messageHistoryStorage.set(title, mh);
+            }
+
+            let msg = await detectMsgOnCurrentChat();
+            msg = msg.filter(T => T.type === 'text');
+            // console.log(msg);
+
+            // find the new message list on all visible message
+            let lastMH = {text: null, from: null};
+            if (mh.length > 0) {
+                lastMH = mh[mh.length - 1];
+            }
+            let indexLast = msg.findIndex(T => T.text === lastMH.text && T.from === lastMH.from);
+            if (indexLast !== undefined) {
+                msg = msg.slice(indexLast + 1);
+            }
+            mh = mh.concat(msg);
+            messageHistoryStorage.set(title, mh);
+
+            if (msg.length === 0) {
+                continue;
+            }
+
+            console.log(msg);
+
         } catch (err) {
-            // console.error('自动回复出现err', err);
+            console.error('onChat err', err);
         }
     }
+}
+
+function detectCurrentChatTitle(): string | undefined {
+    let scope: any = angularScope('#chatArea > div.box_hd > div.title_wrap > div > a');
+    if (scope.currentContact) {
+        return scope.currentContact.getDisplayName();
+    }
+    return undefined;
+}
+
+async function detectMsgOnCurrentChat() {
+
+    let $msg: JQLite = $([
+        '.message:not(.me) .bubble_cont > div',
+        '.message:not(.me) .bubble_cont > a.app',
+        '.message:not(.me) .emoticon',
+        '.message_system'
+    ].join(', '));
+
+    let msgList: any[] = [];
+    $msg.map((i, T) => {
+        let msg = parseMsg($(T));
+        msgList.push(msg);
+    });
+    return msgList;
+
+    // let $msg = $([
+    //     '.message:not(.me) .bubble_cont > div',
+    //     '.message:not(.me) .bubble_cont > a.app',
+    //     '.message:not(.me) .emoticon',
+    //     '.message_system'
+    // ].join(', ')).last();
+    // let msg = parseMsg($msg);
+    // return msg;
 }
 
 async function autoReply() {
