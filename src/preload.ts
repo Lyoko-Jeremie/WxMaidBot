@@ -115,8 +115,9 @@ async function onChat() {
                         console.log('isFinaly ok');
                         let analysisData: carTeachStringAnalysis.AnalysisInfoType
                             = carTeachStringAnalysis.analysisInfo(T);
-                        // let [lines, infoTypes] = analysisData;
-                        // console.log('infoTypes', infoTypes);
+                        let [lines, infoTypes] = analysisData;
+                        // console.log('analysisData lines', lines);
+                        // console.log('analysisData infoTypes', infoTypes);
                         // infoTypes.forEach((L: any) => {
                         //     console.log(JSON.stringify(L, null, 0));
                         // });

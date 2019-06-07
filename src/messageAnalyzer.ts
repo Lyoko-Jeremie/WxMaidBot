@@ -5,6 +5,17 @@ import {remote} from 'electron';
 
 const key_string = remote.process.env.KEY_String;
 
+
+console.log("XRegExp isInstalled astral? :", XRegExp.isInstalled('astral'));
+if (!XRegExp.isInstalled('astral')) {
+    console.log("XRegExp install astral !");
+    XRegExp.install({
+        // Enables support for astral code points in Unicode addons (implicitly sets flag A)
+        astral: true,
+    });
+}
+console.log("XRegExp isInstalled astral? :", XRegExp.isInstalled('astral'));
+
 export namespace carTeachStringAnalysis {
 
     export function checkMessage(s: string) {
@@ -59,7 +70,7 @@ export namespace carTeachStringAnalysis {
             if (r1.test(T)) {
                 return new Info(InfoType.welcome, I);
             }
-            let r2 = XRegExp.cache('^\\s*以下(?:时段|时间段)(?:可最多|最多可)约(\\d)+人.*$', 'u');
+            let r2 = XRegExp.cache('^\\s*以下(?:时段|时间段)(?:可最多|最多可)约(\\d)+人.*$', 'uA');
             if (r2.test(T)) {
                 return new Info(InfoType.userNumberLimit, I, {
                     userNumber: _.parseInt(XRegExp.exec(T, r2, 0)[1]),
@@ -73,7 +84,7 @@ export namespace carTeachStringAnalysis {
                     day: _.parseInt(m[2]),
                 }, T);
             }
-            let r4 = XRegExp.cache('^\\s*(.(?:教练))\\s*(\\d{11})\\s*$', 'u');
+            let r4 = XRegExp.cache('^\\s*(.(?:教练))\\s*(\\d{11})\\s*$', 'uA');
             if (r4.test(T)) {
                 let m = XRegExp.exec(T, r4, 0);
                 return new Info(InfoType.teacherLine, I, {
@@ -81,14 +92,14 @@ export namespace carTeachStringAnalysis {
                     phone: m[2],
                 }, T);
             }
-            let r5 = XRegExp.cache('监督投诉热线[^\\d]*(\\d{11})', 'u');
+            let r5 = XRegExp.cache('监督投诉热线[^\\d]*(\\d{11})', 'uA');
             if (r5.test(T)) {
                 let m = XRegExp.exec(T, r5, 0);
                 return new Info(InfoType.serviceCall, I, {
                     phone: m[1],
                 }, T);
             }
-            let r6 = XRegExp.cache('^\\s*((\\d+(?:\\.|:|：)00)\\s*(?:—|--|-)\\s*(\\d+(?:\\.|:|：)00))(.*)$', 'u');
+            let r6 = XRegExp.cache('^\\s*((\\d+(?:\\.|:|：)00)\\s*(?:—|--|-)\\s*(\\d+(?:\\.|:|：)00))(.*)$', 'uA');
             if (r6.test(T)) {
                 let m = XRegExp.exec(T, r6, 0);
                 return new Info(InfoType.timeLine, I, {
@@ -96,10 +107,10 @@ export namespace carTeachStringAnalysis {
                     tb: m[2],
                     te: m[3],
                     other: m[4],
-                    oe: XRegExp.cache('^\\s*$', 'u').test(m[4])
+                    oe: XRegExp.cache('^\\s*$', 'uA').test(m[4])
                 }, T);
             }
-            let r7 = XRegExp.cache('^\\s*$', 'u');
+            let r7 = XRegExp.cache('^\\s*$', 'uA');
             if (r7.test(T)) {
                 let m = XRegExp.exec(T, r7, 0);
                 return new Info(InfoType.emptyLine, I, {}, T);
@@ -116,7 +127,7 @@ export namespace carTeachStringAnalysis {
     }
 
     export function removeKeyString(data: AnalysisInfoType) {
-        let checker = XRegExp.cache('^(.*)' + key_string + '(.*)$', 'u');
+        let checker = XRegExp.cache('^(.*)' + key_string + '(.*)$', 'uA');
         let [lines, infoTypes] = data;
         lines = lines.map(T => {
             return XRegExp.replace(T, checker, '$1$2');
@@ -148,10 +159,12 @@ export namespace carTeachStringAnalysis {
 
     export function re_construct(data: AnalysisInfoType) {
         let [lines, infoTypes] = data;
+        console.log("re_construct 1", lines);
         let s = "";
-        lines.forEach(T => {
-            s += T + '\n';
+        lines.forEach((T, I, A) => {
+            s += T + (I === A.length - 1 ? '' : '\n');
         });
+        console.log("re_construct 2", [s]);
         return s;
     }
 
@@ -201,7 +214,7 @@ export namespace carTeachStringAnalysis {
     export function fixAngerFlagOnTimeLine(data: AnalysisInfoType): AnalysisInfoType {
         let [lines, infoTypes] = data;
 
-        let clear = XRegExp.cache('(.*)' + String.fromCodePoint(0x1F4A2) + '(.*)', 'u');
+        let clear = XRegExp.cache('(.*)' + String.fromCodePoint(0x1F4A2) + '(.*)', 'uA');
 
         infoTypes.forEach((T, I) => {
             if (T.type === InfoType.timeLine) {
@@ -211,7 +224,7 @@ export namespace carTeachStringAnalysis {
                 console.log(XRegExp.exec(T.other.other, clear, 0));
                 console.log(XRegExp.replace(T.other.other, clear, '$1$2'));
                 console.log(T.other.ta + String.fromCodePoint(0x1F4A2));
-                console.log(T.other.ta + String.fromCodePoint(0x1F4A2)+ XRegExp.replace(T.other.other, clear, '$1$2'));
+                console.log(T.other.ta + String.fromCodePoint(0x1F4A2) + XRegExp.replace(T.other.other, clear, '$1$2'));
                 lines[I] = T.other.ta + String.fromCodePoint(0x1F4A2)
                     + XRegExp.replace(T.other.other, clear, '$1$2');
 
