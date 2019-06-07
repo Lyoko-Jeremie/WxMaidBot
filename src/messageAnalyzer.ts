@@ -34,7 +34,23 @@ export namespace carTeachStringAnalysis {
     }
 
     export class Info {
-        constructor(public type: InfoType, public beginLine: number, public other?: any, public s?: string) {
+        constructor(
+            public type: InfoType,
+            public beginLine: number,
+            public other?: any,
+            public s?: string) {
+        }
+    }
+
+    export class NameListInfo {
+        constructor(
+            public lineB: number,
+            public lineE: number,
+            public oString: string,
+            public nameNum: number = 0,
+            public nameList: string[] = [],
+            public fullFlag: boolean = false,
+        ) {
         }
     }
 
@@ -43,6 +59,7 @@ export namespace carTeachStringAnalysis {
         public bTM: number;
         public eTH: number;
         public eTM: number;
+        public nameInfo?: NameListInfo;
 
         constructor(
             public beginTimeS: string,
@@ -157,6 +174,61 @@ export namespace carTeachStringAnalysis {
         }
     }
 
+    export function checkAndFindTargetOrLastNotFullSegment(
+        segmentInfoList: SegmentInfo[],
+        targetBeginHours: number,
+        targetEndHours: number,
+    ): number | -1 {
+        let n = segmentInfoList.findIndex(T => targetBeginHours === T.bTH && targetEndHours === T.eTH);
+        let maybeN = -1;
+        if (n >= 0) {
+            let si = segmentInfoList[n];
+            if (si.nameInfo && si.limit &&
+                (si.nameInfo.fullFlag || si.limit <= si.nameInfo.nameNum)) {
+                maybeN = n;
+                // n to last
+                for (let i = maybeN; i != segmentInfoList.length; ++i) {
+                    let it = segmentInfoList[n];
+                    if (!(it.nameInfo && it.limit &&
+                        (it.nameInfo.fullFlag || it.limit <= it.nameInfo.nameNum))) {
+                        maybeN = i;
+                        break;
+                    }
+                }
+                if (maybeN > n) {
+                    return segmentInfoList[maybeN].line;
+                }
+                //  else {do last to 0}
+                //  do ed on the function end
+            } else {
+                // finded and
+                maybeN = n;
+                return segmentInfoList[maybeN].line;
+            }
+        }
+        // if (n < 0) or the above {n to last} cannot find
+        {
+            maybeN = segmentInfoList.length - 1;
+            // last to 0
+
+            let flag = false;
+            for (let i = segmentInfoList.length - 1; i >= 0; --i) {
+                let it = segmentInfoList[n];
+                if (!(it.nameInfo && it.limit &&
+                    (it.nameInfo.fullFlag || it.limit <= it.nameInfo.nameNum))) {
+                    maybeN = i;
+                    flag = true;
+                    break;
+                }
+            }
+            if (flag) {
+                return segmentInfoList[maybeN].line;
+            } else {
+                return -1;
+            }
+        }
+    }
+
     export function re_construct(data: AnalysisInfoType) {
         let [lines, infoTypes] = data;
         console.log("re_construct 1", lines);
@@ -218,13 +290,13 @@ export namespace carTeachStringAnalysis {
 
         infoTypes.forEach((T, I) => {
             if (T.type === InfoType.timeLine) {
-                console.log("1F4A2 test");
-                console.log(Array.from(T.other.other));
-                console.log(String.fromCodePoint(0x1F4A2));
-                console.log(XRegExp.exec(T.other.other, clear, 0));
-                console.log(XRegExp.replace(T.other.other, clear, '$1$2'));
-                console.log(T.other.ta + String.fromCodePoint(0x1F4A2));
-                console.log(T.other.ta + String.fromCodePoint(0x1F4A2) + XRegExp.replace(T.other.other, clear, '$1$2'));
+                // console.log("1F4A2 test");
+                // console.log(Array.from(T.other.other));
+                // console.log(String.fromCodePoint(0x1F4A2));
+                // console.log(XRegExp.exec(T.other.other, clear, 0));
+                // console.log(XRegExp.replace(T.other.other, clear, '$1$2'));
+                // console.log(T.other.ta + String.fromCodePoint(0x1F4A2));
+                // console.log(T.other.ta + String.fromCodePoint(0x1F4A2) + XRegExp.replace(T.other.other, clear, '$1$2'));
                 lines[I] = T.other.ta + String.fromCodePoint(0x1F4A2)
                     + XRegExp.replace(T.other.other, clear, '$1$2');
 
@@ -232,6 +304,107 @@ export namespace carTeachStringAnalysis {
         });
 
         return [lines, infoTypes];
+    }
+
+    export function detectUserName(d1: AnalysisInfoType, d2: SegmentInfoType): SegmentInfoType {
+        let [lines, infoTypes] = d1;
+        let [date, segmentInfos] = d2;
+
+        let nilChecker = XRegExp.cache('^\\s*$', 'uA');
+        let numChecker = XRegExp.cache('\\d', 'uA');
+        let nilSplitter = XRegExp.cache('\\s+', 'uA');
+        let nameListLoop = XRegExp.cache('([^\\s]+)', 'guA');
+
+        segmentInfos = segmentInfos.map((T) => {
+            if (!_.isNil(T.limit)) {
+                let lineB: number = -1;
+                let lineE: number = -1;
+                let oString: string = "";
+                if (!XRegExp.test(infoTypes[T.line].other, nilChecker, 0) &&
+                    !XRegExp.test(infoTypes[T.line].other, numChecker, 0)) {
+                    lineB = T.line;
+                    oString = infoTypes[T.line].other.other + '  ';
+                } else {
+                    lineB = T.line + 1;
+                }
+                // console.log('lines', lines);
+                for (let i = T.line + 1; i != lines.length; ++i) {
+                    if (infoTypes[i].type !== InfoType.unknow &&
+                        infoTypes[i].type !== InfoType.emptyLine) {
+                        lineE = i;
+                        break;
+                    }
+                    // console.log('lines[i]', lines[i]);
+                    // console.log(XRegExp.test(lines[i], nilChecker, 0));
+                    // console.log(XRegExp.test(lines[i], numChecker, 0));
+                    if (infoTypes[i].type === InfoType.unknow &&
+                        !XRegExp.test(lines[i], nilChecker, 0) &&
+                        !XRegExp.test(lines[i], numChecker, 0)) {
+                        oString = oString + lines[i] + '  ';
+                    }
+                    // lines[i];
+                    // infoTypes[i];
+                }
+                T.nameInfo = new NameListInfo(
+                    lineB,
+                    lineE,
+                    oString,
+                );
+                // analysis oString
+                // let nList = XRegExp.split(oString, nilSplitter);
+                // console.log('oString', oString);
+                let nList: string[] = [];
+                XRegExp.forEach(oString, nameListLoop, (m, i) => {
+                    if (!_.isNil(m[1])) {
+                        nList.push(m[1]);
+                    }
+                });
+                // console.log('nList', nList);
+                nList = nList.filter(E => E.length > 0);
+                T.nameInfo.nameList = nList;
+                nList.forEach(N => {
+                    if (_.isNil(T.nameInfo)) {
+                        // some wrong
+                        return;
+                    }
+                    // js use USC-2 as string code
+                    // but it not support UTF-8/UTF-16/UTF-32
+                    //
+                    // so, in the new world,
+                    // ```Array.from``` is the only one way to split string by UTF code pair
+                    // and this is the only one correct way to calc UTF string length
+                    let unicodeChar = Array.from(N);
+                    let n = unicodeChar.length;
+                    if (n === 0) {
+                        return;
+                    }
+                    if (n === 1) {
+                        // check it flag
+                        if (unicodeChar[0] === '满') {
+                            T.nameInfo.fullFlag = true;
+                        }
+                        return;
+                    }
+                    if (2 <= n && n <= 3) {
+                        T.nameInfo.nameNum += 1;
+                        return;
+                    }
+                    // two name stick
+                    if (4 <= n && n <= 6) {
+                        T.nameInfo.nameNum += 2;
+                        return;
+                    }
+                    // 3 name stick , or , some wrong
+                    if (6 < n) {
+                        // some wrong
+                        return;
+                    }
+                });
+            }
+            return T;
+        });
+
+        return [date, segmentInfos];
     }
 
 

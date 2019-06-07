@@ -128,21 +128,31 @@ async function onChat() {
                             if (ndCheck) {
                                 let segmentData: carTeachStringAnalysis.SegmentInfoType
                                     = carTeachStringAnalysis.getSegmentInfo(analysisData);
+
+                                segmentData = carTeachStringAnalysis.detectUserName(analysisData, segmentData);
+                                // console.log('theDate', theDate);
+                                // console.log('segmentData', JSON.stringify(segmentData, undefined, 2));
+                                // console.log('segmentData', segmentData);
+
                                 let [theDate, segmentInfoList] = segmentData;
-                                console.log('theDate', theDate);
                                 if (!isNil(theDate)) {
-                                    let line = carTeachStringAnalysis.checkAndFindTargetOrLastSegment(
+                                    let line = carTeachStringAnalysis.checkAndFindTargetOrLastNotFullSegment(
                                         segmentInfoList,
                                         16, 18
                                     );
-                                    analysisData = carTeachStringAnalysis.addKeyString(analysisData, line);
-                                    analysisData = carTeachStringAnalysis.fixAngerFlagOnTimeLine(analysisData);
-                                    let s = carTeachStringAnalysis.re_construct(analysisData);
+                                    if (-1 == line) {
+                                        // cannot find , all are full
+                                        console.log("!!!cannot find , all are full!!!");
+                                    } else {
+                                        analysisData = carTeachStringAnalysis.addKeyString(analysisData, line);
+                                        analysisData = carTeachStringAnalysis.fixAngerFlagOnTimeLine(analysisData);
+                                        let s = carTeachStringAnalysis.re_construct(analysisData);
 
-                                    waitingSendList.push(new WaitingSendInfo(analysisData, segmentData, s));
-                                    // let opt = {text: s};
-                                    // pasteMsg(opt);
-                                    // await clickSend(opt);
+                                        waitingSendList.push(new WaitingSendInfo(analysisData, segmentData, s));
+                                        // let opt = {text: s};
+                                        // pasteMsg(opt);
+                                        // await clickSend(opt);
+                                    }
                                 }
                             }
                         }
