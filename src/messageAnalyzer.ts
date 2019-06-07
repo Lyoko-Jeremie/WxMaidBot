@@ -182,30 +182,37 @@ export namespace carTeachStringAnalysis {
         let n = segmentInfoList.findIndex(T => targetBeginHours === T.bTH && targetEndHours === T.eTH);
         let maybeN = -1;
         if (n >= 0) {
+            // console.log('cAFTOLNFS', "if (n >= 0) {");
             let si = segmentInfoList[n];
             if (si.nameInfo && si.limit &&
                 (si.nameInfo.fullFlag || si.limit <= si.nameInfo.nameNum)) {
+                // console.log('cAFTOLNFS', "si");
                 maybeN = n;
                 // n to last
                 for (let i = maybeN; i != segmentInfoList.length; ++i) {
-                    let it = segmentInfoList[n];
-                    if (!(it.nameInfo && it.limit &&
-                        (it.nameInfo.fullFlag || it.limit <= it.nameInfo.nameNum))) {
+                    let it = segmentInfoList[i];
+                    if ((it.nameInfo && !it.nameInfo.fullFlag)
+                        &&
+                        (it.limit && it.limit > it.nameInfo.nameNum)) {
                         maybeN = i;
                         break;
                     }
                 }
                 if (maybeN > n) {
+                    // console.log('cAFTOLNFS', "maybeN");
                     return segmentInfoList[maybeN].line;
                 }
                 //  else {do last to 0}
                 //  do ed on the function end
+                // console.log('cAFTOLNFS', "{do last to 0}");
             } else {
+                // console.log('cAFTOLNFS', "finded and");
                 // finded and
                 maybeN = n;
                 return segmentInfoList[maybeN].line;
             }
         }
+        // console.log('cAFTOLNFS', "if (n < 0)");
         // if (n < 0) or the above {n to last} cannot find
         {
             maybeN = segmentInfoList.length - 1;
@@ -213,9 +220,11 @@ export namespace carTeachStringAnalysis {
 
             let flag = false;
             for (let i = segmentInfoList.length - 1; i >= 0; --i) {
-                let it = segmentInfoList[n];
-                if (!(it.nameInfo && it.limit &&
-                    (it.nameInfo.fullFlag || it.limit <= it.nameInfo.nameNum))) {
+                let it = segmentInfoList[i];
+                // console.log(i, it.limit, it.nameInfo);
+                if ((it.nameInfo && !it.nameInfo.fullFlag)
+                    &&
+                    (it.limit && it.limit > it.nameInfo.nameNum)) {
                     maybeN = i;
                     flag = true;
                     break;

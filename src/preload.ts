@@ -142,7 +142,7 @@ async function onChat() {
                                     );
                                     if (-1 == line) {
                                         // cannot find , all are full
-                                        console.log("!!!cannot find , all are full!!!");
+                                        console.error("!!!cannot find , all are full!!!");
                                     } else {
                                         analysisData = carTeachStringAnalysis.addKeyString(analysisData, line);
                                         analysisData = carTeachStringAnalysis.fixAngerFlagOnTimeLine(analysisData);
