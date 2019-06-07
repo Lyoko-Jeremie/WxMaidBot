@@ -11,6 +11,8 @@ import {carTeachStringAnalysis} from "./messageAnalyzer";
 
 console.log(remote);
 
+const Key_Room_title = remote.process.env.Key_Room_title;
+
 let messageHistoryStorage: Map<string, Array<any>> = new Map<string, Array<any>>();
 
 
@@ -82,6 +84,7 @@ async function onChat() {
 
             let msg = await detectMsgOnCurrentChat();
             msg = msg.filter(T => T.type === 'text');
+            msg = msg.filter(T => T.room === title);
             // console.log(msg);
 
             // find the new message list on all visible message
