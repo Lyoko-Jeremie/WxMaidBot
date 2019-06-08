@@ -136,10 +136,26 @@ async function onChat() {
 
                                 let [theDate, segmentInfoList] = segmentData;
                                 if (!isNil(theDate)) {
-                                    let line = carTeachStringAnalysis.checkAndFindTargetOrLastNotFullSegment(
-                                        segmentInfoList,
-                                        16, 18
-                                    );
+                                    let line = -1;
+                                    let targetHours = {
+                                        b: 16,
+                                        e: 18,
+                                    };
+                                    if (segmentInfoList.every(T => !!T.limit && !!T.nameInfo)) {
+                                        // good case
+                                        console.log("segmentInfoList", "good case");
+                                        line = carTeachStringAnalysis.checkAndFindTargetOrLastNotFullSegment(
+                                            segmentInfoList,
+                                            targetHours.b, targetHours.e
+                                        );
+                                    } else {
+                                        // down level case
+                                        console.log("segmentInfoList", "down level case");
+                                        line = carTeachStringAnalysis.checkAndFindTargetOrLastSegment(
+                                            segmentInfoList,
+                                            targetHours.b, targetHours.e
+                                        );
+                                    }
                                     if (-1 == line) {
                                         // cannot find , all are full
                                         console.error("!!!cannot find , all are full!!!");
