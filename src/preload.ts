@@ -9,7 +9,7 @@ import {ipcSendBackInfo} from "./preloadIpc";
 import {angularScope, angularSelector} from "./angularJsHelper";
 import {carTeachStringAnalysis} from "./messageAnalyzer";
 
-console.log(remote);
+// console.log(remote);
 
 const Key_Room_title = remote.process.env.Key_Room_title;
 
@@ -64,125 +64,145 @@ class WaitingSendInfo {
     }
 }
 
+async function onChat_do() {
+
+    let title = detectCurrentChatTitle();
+    if (!title) {
+        await delay(500);
+        return;
+    }
+
+    await delay(100);
+    // console.log(title);
+    let mh = messageHistoryStorage.get(title);
+    if (!mh) {
+        mh = [];
+        messageHistoryStorage.set(title, mh);
+    }
+
+    let msg = await detectMsgOnCurrentChat();
+    msg = msg.filter(T => T.type === 'text');
+    msg = msg.filter(T => T.room === title);
+    // console.log(msg);
+
+    // find the new message list on all visible message
+    let lastMH = {text: null, from: null};
+    if (mh.length > 0) {
+        lastMH = mh[mh.length - 1];
+    }
+    let indexLast = msg.findIndex(T => T.text === lastMH.text && T.from === lastMH.from);
+    if (indexLast !== undefined) {
+        msg = msg.slice(indexLast + 1);
+    }
+    mh = mh.concat(msg);
+    messageHistoryStorage.set(title, mh);
+
+    if (msg.length === 0) {
+        return;
+    }
+
+    console.log(msg);
+
+    let waitingSendList: WaitingSendInfo[] = [];
+    msg.forEach(IT => {
+        let T = IT.text;
+        console.log('msg.forEach');
+        if (!carTeachStringAnalysis.checkMessage(T)) {
+            console.log('checkMessage failed.');
+            return;
+        }
+
+        console.log('checkMessage ok');
+        if (carTeachStringAnalysis.isFinally(T)) {
+            console.log('isFinaly!.');
+            return;
+        }
+
+        console.log('isFinaly ok');
+        let analysisData: carTeachStringAnalysis.AnalysisInfoType
+            = carTeachStringAnalysis.analysisInfo(T);
+        let [lines, infoTypes] = analysisData;
+        // console.log('analysisData lines', lines);
+        // console.log('analysisData infoTypes', infoTypes);
+        // infoTypes.forEach((L: any) => {
+        //     console.log(JSON.stringify(L, null, 0));
+        // });
+
+        let ndCheck = carTeachStringAnalysis.checkIsNextDay(analysisData);
+        console.log('ndCheck', ndCheck);
+        if (ndCheck === -1) {
+            console.log('ndCheck === -1');
+            return;
+        }
+
+        if (!ndCheck) {
+            console.log('!ndCheck');
+            return;
+        }
+
+        let segmentData: carTeachStringAnalysis.SegmentInfoType
+            = carTeachStringAnalysis.getSegmentInfo(analysisData);
+
+        segmentData = carTeachStringAnalysis.detectUserName(analysisData, segmentData);
+        // console.log('theDate', theDate);
+        // console.log('segmentData', JSON.stringify(segmentData, undefined, 2));
+        // console.log('segmentData', segmentData);
+
+        let [theDate, segmentInfoList] = segmentData;
+        if (isNil(theDate)) {
+            console.log('isNil(theDate)');
+            return;
+        }
+
+        let line = -1;
+        let targetHours = {
+            b: 16,
+            e: 18,
+        };
+        if (segmentInfoList.every(T => !!T.limit && !!T.nameInfo)) {
+            // good case
+            console.log("segmentInfoList", "good case");
+            line = carTeachStringAnalysis.checkAndFindTargetOrLastNotFullSegment(
+                segmentInfoList,
+                targetHours.b, targetHours.e
+            );
+        } else {
+            // down level case
+            console.log("segmentInfoList", "down level case");
+            line = carTeachStringAnalysis.checkAndFindTargetOrLastSegment(
+                segmentInfoList,
+                targetHours.b, targetHours.e
+            );
+        }
+        if (-1 == line) {
+            // cannot find , all are full
+            console.error("!!!cannot find , all are full!!!");
+        } else {
+            analysisData = carTeachStringAnalysis.addKeyString(analysisData, line);
+            analysisData = carTeachStringAnalysis.fixAngerFlagOnTimeLine(analysisData);
+            let s = carTeachStringAnalysis.re_construct(analysisData);
+
+            waitingSendList.push(new WaitingSendInfo(analysisData, segmentData, s));
+            // let opt = {text: s};
+            // pasteMsg(opt);
+            // await clickSend(opt);
+        }
+
+    });
+
+    for (let i = 0; i != waitingSendList.length; ++i) {
+        let w = waitingSendList[i];
+        let opt = {text: w.s};
+        pasteMsg(opt);
+        await clickSend(opt);
+    }
+
+}
+
 async function onChat() {
-    while (true) { // 保持回复消息
+    while (true) {
         try {
-
-            let title = detectCurrentChatTitle();
-            if (!title) {
-                await delay(500);
-                continue;
-            }
-
-            await delay(100);
-            // console.log(title);
-            let mh = messageHistoryStorage.get(title);
-            if (!mh) {
-                mh = [];
-                messageHistoryStorage.set(title, mh);
-            }
-
-            let msg = await detectMsgOnCurrentChat();
-            msg = msg.filter(T => T.type === 'text');
-            msg = msg.filter(T => T.room === title);
-            // console.log(msg);
-
-            // find the new message list on all visible message
-            let lastMH = {text: null, from: null};
-            if (mh.length > 0) {
-                lastMH = mh[mh.length - 1];
-            }
-            let indexLast = msg.findIndex(T => T.text === lastMH.text && T.from === lastMH.from);
-            if (indexLast !== undefined) {
-                msg = msg.slice(indexLast + 1);
-            }
-            mh = mh.concat(msg);
-            messageHistoryStorage.set(title, mh);
-
-            if (msg.length === 0) {
-                continue;
-            }
-
-            console.log(msg);
-
-            let waitingSendList: WaitingSendInfo[] = [];
-            msg.forEach(IT => {
-                let T = IT.text;
-                console.log('msg.forEach');
-                if (carTeachStringAnalysis.checkMessage(T)) {
-                    console.log('checkMessage ok');
-                    if (!carTeachStringAnalysis.isFinally(T)) {
-                        console.log('isFinaly ok');
-                        let analysisData: carTeachStringAnalysis.AnalysisInfoType
-                            = carTeachStringAnalysis.analysisInfo(T);
-                        let [lines, infoTypes] = analysisData;
-                        // console.log('analysisData lines', lines);
-                        // console.log('analysisData infoTypes', infoTypes);
-                        // infoTypes.forEach((L: any) => {
-                        //     console.log(JSON.stringify(L, null, 0));
-                        // });
-
-                        let ndCheck = carTeachStringAnalysis.checkIsNextDay(analysisData);
-                        console.log('ndCheck', ndCheck);
-                        if (ndCheck !== -1) {
-                            if (ndCheck) {
-                                let segmentData: carTeachStringAnalysis.SegmentInfoType
-                                    = carTeachStringAnalysis.getSegmentInfo(analysisData);
-
-                                segmentData = carTeachStringAnalysis.detectUserName(analysisData, segmentData);
-                                // console.log('theDate', theDate);
-                                // console.log('segmentData', JSON.stringify(segmentData, undefined, 2));
-                                // console.log('segmentData', segmentData);
-
-                                let [theDate, segmentInfoList] = segmentData;
-                                if (!isNil(theDate)) {
-                                    let line = -1;
-                                    let targetHours = {
-                                        b: 16,
-                                        e: 18,
-                                    };
-                                    if (segmentInfoList.every(T => !!T.limit && !!T.nameInfo)) {
-                                        // good case
-                                        console.log("segmentInfoList", "good case");
-                                        line = carTeachStringAnalysis.checkAndFindTargetOrLastNotFullSegment(
-                                            segmentInfoList,
-                                            targetHours.b, targetHours.e
-                                        );
-                                    } else {
-                                        // down level case
-                                        console.log("segmentInfoList", "down level case");
-                                        line = carTeachStringAnalysis.checkAndFindTargetOrLastSegment(
-                                            segmentInfoList,
-                                            targetHours.b, targetHours.e
-                                        );
-                                    }
-                                    if (-1 == line) {
-                                        // cannot find , all are full
-                                        console.error("!!!cannot find , all are full!!!");
-                                    } else {
-                                        analysisData = carTeachStringAnalysis.addKeyString(analysisData, line);
-                                        analysisData = carTeachStringAnalysis.fixAngerFlagOnTimeLine(analysisData);
-                                        let s = carTeachStringAnalysis.re_construct(analysisData);
-
-                                        waitingSendList.push(new WaitingSendInfo(analysisData, segmentData, s));
-                                        // let opt = {text: s};
-                                        // pasteMsg(opt);
-                                        // await clickSend(opt);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-
-            for (let i = 0; i != waitingSendList.length; ++i) {
-                let w = waitingSendList[i];
-                let opt = {text: w.s};
-                pasteMsg(opt);
-                await clickSend(opt);
-            }
-
+            await onChat_do();
         } catch (err) {
             console.error('onChat err', err);
         }
