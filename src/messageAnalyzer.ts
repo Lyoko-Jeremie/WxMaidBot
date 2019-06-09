@@ -137,9 +137,6 @@ export namespace carTeachStringAnalysis {
             return new Info(InfoType.unknow, I, {}, T);
         });
 
-        // TODO analysis user name
-
-
         return [lines, infoTypes];
     }
 
@@ -172,6 +169,37 @@ export namespace carTeachStringAnalysis {
         } else {
             return n.line;
         }
+    }
+
+    export function checkAndFindTargetSegmentByList(
+        segmentInfoList: SegmentInfo[],
+        targetHours: { begin: number, end: number }[],
+    ): number | -1 {
+        for (let i = 0; i != targetHours.length; ++i) {
+            let n = segmentInfoList.find(T => targetHours[i].begin === T.bTH && targetHours[i].end === T.eTH);
+            if (!_.isNil(n)) {
+                return n.line;
+            }
+        }
+        return -1;
+    }
+
+    export function checkAndFindTargetNotFullSegmentByList(
+        segmentInfoList: SegmentInfo[],
+        targetHours: { begin: number, end: number }[],
+        checkTag: { limit: boolean, fullFlag: boolean } = {limit: true, fullFlag: true},
+    ): number | -1 {
+        for (let i = 0; i != targetHours.length; ++i) {
+            let it = segmentInfoList.find(T => targetHours[i].begin === T.bTH && targetHours[i].end === T.eTH);
+            if (!_.isNil(it)) {
+                if ((checkTag.fullFlag ? (it.nameInfo && !it.nameInfo.fullFlag) : true)
+                    &&
+                    (checkTag.limit ? (it.limit && it.nameInfo && it.limit > it.nameInfo.nameNum) : true)) {
+                    return it.line;
+                }
+            }
+        }
+        return -1;
     }
 
     export function checkAndFindTargetOrLastNotFullSegment(
