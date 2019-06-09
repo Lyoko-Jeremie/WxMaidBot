@@ -155,24 +155,54 @@ async function onChat_do() {
         }
 
         let line = -1;
-        let targetHours = {
-            b: 16,
-            e: 18,
-        };
-        if (segmentInfoList.every(T => !!T.limit && !!T.nameInfo)) {
-            // good case
-            console.log("segmentInfoList", "good case");
-            line = carTeachStringAnalysis.checkAndFindTargetOrLastNotFullSegment(
-                segmentInfoList,
-                targetHours.b, targetHours.e
-            );
+        let targetHours = [
+            {begin: 14, end: 16,},
+            {begin: 16, end: 18,},
+            {begin: 12, end: 14,},
+        ];
+        let targetListMode: boolean = true;
+        if (targetListMode) {
+            console.log("segmentInfoList", "TargetList Mode");
+            if (segmentInfoList.every(T => !!T.limit && !!T.nameInfo)) {
+                // good case
+                console.log("segmentInfoList", "good case");
+                line = carTeachStringAnalysis.checkAndFindTargetNotFullSegmentByList(
+                    segmentInfoList,
+                    targetHours,
+                );
+            } else if (segmentInfoList.every(T => !!T.nameInfo)) {
+                // half down level case fullFlag
+                console.log("segmentInfoList", "half down level case fullFlag");
+                line = carTeachStringAnalysis.checkAndFindTargetNotFullSegmentByList(
+                    segmentInfoList,
+                    targetHours,
+                    {limit: false, fullFlag: true},
+                );
+            } else {
+                // down level case all
+                console.log("segmentInfoList", "down level case all");
+                line = carTeachStringAnalysis.checkAndFindTargetSegmentByList(
+                    segmentInfoList,
+                    targetHours,
+                );
+            }
         } else {
-            // down level case
-            console.log("segmentInfoList", "down level case");
-            line = carTeachStringAnalysis.checkAndFindTargetOrLastSegment(
-                segmentInfoList,
-                targetHours.b, targetHours.e
-            );
+            console.log("segmentInfoList", "TargetOrLast Mode");
+            if (segmentInfoList.every(T => !!T.limit && !!T.nameInfo)) {
+                // good case
+                console.log("segmentInfoList", "good case");
+                line = carTeachStringAnalysis.checkAndFindTargetOrLastNotFullSegment(
+                    segmentInfoList,
+                    targetHours[0].begin, targetHours[0].end
+                );
+            } else {
+                // down level case
+                console.log("segmentInfoList", "down level case");
+                line = carTeachStringAnalysis.checkAndFindTargetOrLastSegment(
+                    segmentInfoList,
+                    targetHours[0].begin, targetHours[0].end
+                );
+            }
         }
         if (-1 == line) {
             // cannot find , all are full
