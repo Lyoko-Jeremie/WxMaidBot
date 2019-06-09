@@ -3,6 +3,7 @@ import {app, session, ipcMain, BrowserWindow, Session} from "electron";
 import {tmpdir} from "os";
 import {join} from "path";
 import fs from "fs";
+import {URL} from 'url';
 // let open = require('open')
 let mime = require('mime');
 
@@ -29,11 +30,57 @@ ipcMain.on('ipcSendBackInfo', (e: any, obj: any) => {
 
 });
 
+app.on('web-contents-created', (event, contents) => {
+    contents.on('will-attach-webview', (event, webPreferences, params) => {
+        console.log('will-attach-webview', webPreferences, JSON.stringify(webPreferences));
+
+        // Strip away preload scripts if unused or verify their location is legitimate
+        delete webPreferences.preload;
+        delete webPreferences.preloadURL;
+
+        // Disable Node.js integration
+        webPreferences.nodeIntegration = false;
+
+        // // Verify URL being loaded
+        // if (!params.src.startsWith('https://example.com/')) {
+        //     event.preventDefault()
+        // }
+    })
+});
+
+app.on('web-contents-created', (event, contents) => {
+    contents.on('will-navigate', (event, navigationUrl) => {
+        const parsedUrl = new URL(navigationUrl);
+        console.log('will-navigate', navigationUrl, parsedUrl);
+
+        // if (parsedUrl.origin !== 'https://example.com') {
+        //     event.preventDefault()
+        // }
+    })
+});
+
+app.on('web-contents-created', (event, contents) => {
+    contents.on('new-window', async (event, navigationUrl) => {
+        console.log('new-window', navigationUrl);
+        // In this example, we'll ask the operating system
+        // to open this event's url in the default browser.
+        event.preventDefault();
+
+        // await shell.openExternal(navigationUrl)
+    })
+});
+
 app.on('activate', () => {
     if (win) win.show()
 });
 
 app.on('ready', () => {
+
+    // console.log(join(__dirname, '../../wxbot-ext/AngularJS_v0.10.9'));
+    // BrowserWindow.addDevToolsExtension(join(__dirname, '../../wxbot-ext/AngularJS_v0.10.9'));
+    // BrowserWindow.addDevToolsExtension(join(__dirname, '../../wxbot-ext/jQuery-Debugger_v0.1.3.2'));
+    // BrowserWindow.addDevToolsExtension(join(__dirname, '../../wxbot-ext/Vue.js-devtools_v5.1.0'));
+
     let show = true; // 是否显示浏览器窗口
     let preload = join(__dirname, 'preload.js');
 
