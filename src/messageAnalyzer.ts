@@ -353,90 +353,96 @@ export namespace carTeachStringAnalysis {
         let nameListLoop = XRegExp.cache('([^\\s]+)', 'guA');
 
         segmentInfos = segmentInfos.map((T) => {
-            if (!_.isNil(T.limit)) {
-                let lineB: number = -1;
-                let lineE: number = -1;
-                let oString: string = "";
-                if (!XRegExp.test(infoTypes[T.line].other, nilChecker, 0) &&
-                    !XRegExp.test(infoTypes[T.line].other, numChecker, 0)) {
-                    lineB = T.line;
-                    oString = infoTypes[T.line].other.other + '  ';
-                } else {
-                    lineB = T.line + 1;
-                }
-                // console.log('lines', lines);
-                for (let i = T.line + 1; i != lines.length; ++i) {
-                    if (infoTypes[i].type !== InfoType.unknow &&
-                        infoTypes[i].type !== InfoType.emptyLine) {
-                        lineE = i;
-                        break;
+            try {
+                // if (!_.isNil(T.limit))
+                {
+                    let lineB: number = -1;
+                    let lineE: number = -1;
+                    let oString: string = "";
+                    if (!XRegExp.test(infoTypes[T.line].other, nilChecker, 0) &&
+                        !XRegExp.test(infoTypes[T.line].other, numChecker, 0)) {
+                        lineB = T.line;
+                        oString = infoTypes[T.line].other.other + '  ';
+                    } else {
+                        lineB = T.line + 1;
                     }
-                    // console.log('lines[i]', lines[i]);
-                    // console.log(XRegExp.test(lines[i], nilChecker, 0));
-                    // console.log(XRegExp.test(lines[i], numChecker, 0));
-                    if (infoTypes[i].type === InfoType.unknow &&
-                        !XRegExp.test(lines[i], nilChecker, 0) &&
-                        !XRegExp.test(lines[i], numChecker, 0)) {
-                        oString = oString + lines[i] + '  ';
-                    }
-                    // lines[i];
-                    // infoTypes[i];
-                }
-                T.nameInfo = new NameListInfo(
-                    lineB,
-                    lineE,
-                    oString,
-                );
-                // analysis oString
-                // let nList = XRegExp.split(oString, nilSplitter);
-                // console.log('oString', oString);
-                let nList: string[] = [];
-                XRegExp.forEach(oString, nameListLoop, (m, i) => {
-                    if (!_.isNil(m[1])) {
-                        nList.push(m[1]);
-                    }
-                });
-                // console.log('nList', nList);
-                nList = nList.filter(E => E.length > 0);
-                T.nameInfo.nameList = nList;
-                nList.forEach(N => {
-                    if (_.isNil(T.nameInfo)) {
-                        // some wrong
-                        return;
-                    }
-                    // js use USC-2 as string code
-                    // but it not support UTF-8/UTF-16/UTF-32
-                    //
-                    // so, in the new world,
-                    // ```Array.from``` is the only one way to split string by UTF code pair
-                    // and this is the only one correct way to calc UTF string length
-                    let unicodeChar = Array.from(N);
-                    let n = unicodeChar.length;
-                    if (n === 0) {
-                        return;
-                    }
-                    if (n === 1) {
-                        // check it flag
-                        if (unicodeChar[0] === '满') {
-                            T.nameInfo.fullFlag = true;
+                    // console.log('lines', lines);
+                    for (let i = T.line + 1; i != lines.length; ++i) {
+                        if (infoTypes[i].type !== InfoType.unknow &&
+                            infoTypes[i].type !== InfoType.emptyLine) {
+                            lineE = i;
+                            break;
                         }
-                        return;
+                        // console.log('lines[i]', lines[i]);
+                        // console.log(XRegExp.test(lines[i], nilChecker, 0));
+                        // console.log(XRegExp.test(lines[i], numChecker, 0));
+                        if (infoTypes[i].type === InfoType.unknow &&
+                            !XRegExp.test(lines[i], nilChecker, 0) &&
+                            !XRegExp.test(lines[i], numChecker, 0)) {
+                            oString = oString + lines[i] + '  ';
+                        }
+                        // lines[i];
+                        // infoTypes[i];
                     }
-                    if (2 <= n && n <= 3) {
-                        T.nameInfo.nameNum += 1;
-                        return;
-                    }
-                    // two name stick
-                    if (4 <= n && n <= 6) {
-                        T.nameInfo.nameNum += 2;
-                        return;
-                    }
-                    // 3 name stick , or , some wrong
-                    if (6 < n) {
-                        // some wrong
-                        return;
-                    }
-                });
+                    T.nameInfo = new NameListInfo(
+                        lineB,
+                        lineE,
+                        oString,
+                    );
+                    // analysis oString
+                    // let nList = XRegExp.split(oString, nilSplitter);
+                    // console.log('oString', oString);
+                    let nList: string[] = [];
+                    XRegExp.forEach(oString, nameListLoop, (m, i) => {
+                        if (!_.isNil(m[1])) {
+                            nList.push(m[1]);
+                        }
+                    });
+                    // console.log('nList', nList);
+                    nList = nList.filter(E => E.length > 0);
+                    T.nameInfo.nameList = nList;
+                    nList.forEach(N => {
+                        if (_.isNil(T.nameInfo)) {
+                            // some wrong
+                            return;
+                        }
+                        // js use USC-2 as string code
+                        // but it not support UTF-8/UTF-16/UTF-32
+                        //
+                        // so, in the new world,
+                        // ```Array.from``` is the only one way to split string by UTF code pair
+                        // and this is the only one correct way to calc UTF string length
+                        let unicodeChar = Array.from(N);
+                        let n = unicodeChar.length;
+                        if (n === 0) {
+                            return;
+                        }
+                        if (n === 1) {
+                            // check it flag
+                            if (unicodeChar[0] === '满') {
+                                T.nameInfo.fullFlag = true;
+                            }
+                            return;
+                        }
+                        if (2 <= n && n <= 3) {
+                            T.nameInfo.nameNum += 1;
+                            return;
+                        }
+                        // two name stick
+                        if (4 <= n && n <= 6) {
+                            T.nameInfo.nameNum += 2;
+                            return;
+                        }
+                        // 3 name stick , or , some wrong
+                        if (6 < n) {
+                            // some wrong
+                            return;
+                        }
+                    });
+                }
+            } catch (e) {
+                /* empty */
+                console.error('detectUserName error : ', e);
             }
             return T;
         });
