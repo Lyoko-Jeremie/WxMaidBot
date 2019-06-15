@@ -2,6 +2,7 @@ import _ from 'lodash';
 import XRegExp from 'xregexp';
 import moment from 'moment';
 import {remote} from 'electron';
+import {findIndexOfSingleNameCharAll, testHaveSingleNameChar} from './ChineseNameAnalysis';
 
 const key_string = remote.process.env.KEY_String;
 
@@ -350,7 +351,7 @@ export namespace carTeachStringAnalysis {
         let nilChecker = XRegExp.cache('^\\s*$', 'uA');
         let numChecker = XRegExp.cache('\\d', 'uA');
         let nilSplitter = XRegExp.cache('\\s+', 'uA');
-        let nameListLoop = XRegExp.cache('([^\\s]+)', 'guA');
+        let nameListLoop = XRegExp.cache('([^\\s，,。.]+)', 'guA');
 
         segmentInfos = segmentInfos.map((T) => {
             try {
@@ -433,10 +434,21 @@ export namespace carTeachStringAnalysis {
                             T.nameInfo.nameNum += 2;
                             return;
                         }
-                        // 3 name stick , or , some wrong
-                        if (6 < n) {
-                            // some wrong
-                            return;
+                        // // 3 name stick , or , some wrong
+                        // if (6 < n) {
+                        //     // some wrong
+                        //     return;
+                        // }
+
+                        // 3 name x 2
+                        // 2 name x 3
+                        // 2 name x 4
+                        // 3 name x 3
+                        // 3 name x 4
+                        if (6 < n && n < 12) {
+                            let info = findIndexOfSingleNameCharAll(N);
+                            // TODO filter some one use first name as second name case
+                            T.nameInfo.nameNum += info.length;
                         }
                     });
                 }

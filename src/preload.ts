@@ -1,4 +1,5 @@
 import './preloadIpc';
+import {findIndexOfSingleNameCharAll, testHaveSingleNameCharAll} from './ChineseNameAnalysis';
 import {clipboard, nativeImage, remote} from 'electron';
 import {s, sa, delay, download} from './util';
 import {parseMsg} from './parseMsg';
@@ -10,6 +11,8 @@ import {angularScope, angularSelector} from "./angularJsHelper";
 import {carTeachStringAnalysis} from "./messageAnalyzer";
 
 // console.log(remote);
+console.log('testHaveSingleNameChar', testHaveSingleNameCharAll('蔺港李丹丹宋亚丹'));
+console.log('findIndexOfSingleNameChar', findIndexOfSingleNameCharAll('蔺港李丹丹宋亚丹'));
 
 const Key_Room_title = remote.process.env.Key_Room_title;
 
@@ -159,6 +162,7 @@ async function onChat_do() {
             {begin: 14, end: 16,},
             {begin: 16, end: 18,},
             {begin: 12, end: 14,},
+            {begin: 10, end: 12,},
         ];
         let targetListMode: boolean = true;
         if (targetListMode) {
