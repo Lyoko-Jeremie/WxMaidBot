@@ -4,7 +4,9 @@ import {tmpdir} from "os";
 import {join} from "path";
 import fs from "fs";
 import {URL} from 'url';
-// let open = require('open')
+import * as url from "url";
+import * as path from "path";
+import {delay} from "./util";
 let mime = require('mime');
 
 let downloadDir = join(__dirname, '../download');
@@ -14,7 +16,7 @@ try {
     // ignore
 }
 
-let win: any;
+let win: BrowserWindow;
 
 // 将renderer的输出 转发到terminal
 ipcMain.on('renderer', (e: any, k: string, args: any) => {
@@ -74,7 +76,8 @@ app.on('activate', () => {
     if (win) win.show()
 });
 
-app.on('ready', () => {
+app.on('ready', async () => {
+    // await delay(10000);
 
     // console.log(join(__dirname, '../../wxbot-ext/AngularJS_v0.10.9'));
     // BrowserWindow.addDevToolsExtension(join(__dirname, '../../wxbot-ext/AngularJS_v0.10.9'));
@@ -85,6 +88,8 @@ app.on('ready', () => {
     let preload = join(__dirname, 'preload.js');
 
     win = new BrowserWindow({
+        // transparent: true,
+        // frame: false,
         webPreferences: {
             preload,
             nodeIntegration: false
@@ -106,6 +111,11 @@ app.on('ready', () => {
         win.show();
     });
     win.loadURL('https://wx.qq.com');
+    // win.loadURL(url.format({
+    //     pathname: path.join(__dirname, '../src/index.html'),
+    //     protocol: 'file:',
+    //     slashes: true,
+    // }));
 
     let sess: Session = (<Session>session.defaultSession);
     sess.on('will-download', async (e, item) => {
