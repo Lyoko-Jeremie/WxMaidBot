@@ -13,7 +13,7 @@
   "main": "src",
   "scripts": {
     "start": "npm run build & npm run run",
-    "build": "tsc",
+    "build": "tsc --watch",
     "run": "node ./dist/index.js"
   },
   "dependencies": {
