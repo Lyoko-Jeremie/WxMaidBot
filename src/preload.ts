@@ -5,18 +5,46 @@ import {s, sa, delay, download} from './util';
 import {parseMsg} from './parseMsg';
 import {replyMsg} from './replyMsg';
 import {Clipboard} from 'electron';
-import {isNil} from 'lodash';
+import {isNil, parseInt, reduce} from 'lodash';
 import {ipcSendBackInfo} from "./preloadIpc";
 import {angularScope, angularSelector} from "./angularJsHelper";
 import {carTeachStringAnalysis} from "./messageAnalyzer";
+import {testEmojiCatchReg, toUTF16} from "./emojiParseHelper";
+import XRegExp from 'xregexp';
+
+
+console.log("XRegExp isInstalled astral? :", XRegExp.isInstalled('astral'));
+if (!XRegExp.isInstalled('astral')) {
+    console.log("XRegExp install astral !");
+    XRegExp.install({
+        // Enables support for astral code points in Unicode addons (implicitly sets flag A)
+        astral: true,
+    });
+}
+console.log("XRegExp isInstalled astral? :", XRegExp.isInstalled('astral'));
+
+
+//test
+let es = "";
+for (let i = 0x1f600; i != 0x1f650; ++i) {
+    es = es + String.fromCodePoint(i);
+}
+console.log(es);
+es = "";
+for (let i = 0x1f300; i != 0x1f600; ++i) {
+    es = es + String.fromCodePoint(i);
+}
+console.log(es);
+
 
 // console.log(remote);
-console.log('testHaveSingleNameChar', testHaveSingleNameCharAll('蔺港李丹丹宋亚丹'));
-console.log('findIndexOfSingleNameChar', findIndexOfSingleNameCharAll('蔺港李丹丹宋亚丹'));
+// console.log('testHaveSingleNameChar', testHaveSingleNameCharAll('蔺港李丹丹宋亚丹'));
+// console.log('findIndexOfSingleNameChar', findIndexOfSingleNameCharAll('蔺港李丹丹宋亚丹'));
 
 const Key_Room_title = remote.process.env.Key_Room_title;
 
 let messageHistoryStorage: Map<string, Array<any>> = new Map<string, Array<any>>();
+let messageHistoryIdStorage: Map<string, ScopeMessageInfo> = new Map<string, ScopeMessageInfo>();
 
 
 // 禁用微信网页绑定的beforeunload
@@ -67,6 +95,88 @@ class WaitingSendInfo {
     }
 }
 
+export enum MessagePairType {
+    string = 'string',
+    newLine = 'newLine',
+    emoji = 'emoji',
+    unknown = 'unknown',
+}
+
+export interface MessagePair {
+    m?: string;
+    emojiCode?: number;
+    t: MessagePairType;
+}
+
+export interface ScopeMessageInfo {
+    msg: MessagePair[];
+    ClientMsgId: string;
+    MsgId: string;
+    CreateTime: number;
+}
+
+function getMessageFromAngularScop(): ScopeMessageInfo | undefined {
+    let scope: any = angularScope(
+        angularSelector('.message:not(.me) .bubble_cont > div').last()
+    );
+    if (scope.message &&
+        // is message type
+        // (this checker come from web)
+        scope.message.MsgType == scope.CONF.MSGTYPE_TEXT &&
+        scope.message.SubMsgType != scope.CONF.MSGTYPE_LOCATION) {
+
+        console.log(scope.message);
+        console.log(scope.message.Content);
+        console.log(scope.message.MMActualSender);
+        const msgCap = XRegExp.cache('^' + scope.message.MMActualSender + ':<br\\/>(.+)$', 'uA');
+        if (!XRegExp.test((scope.message.Content as string), msgCap)) {
+            return undefined;
+        }
+        let m = XRegExp.exec((scope.message.Content as string), msgCap);
+        console.log(m[0]);
+        console.log(m[1]);
+
+        let msg: MessagePair[] = [];
+        let h: HTMLElement[] = $.parseHTML(m[1]);
+        h.forEach(t => {
+            switch (t.nodeName) {
+                case '#text':
+                    if (t.textContent)
+                        msg.push({m: t.textContent, t: MessagePairType.string});
+                    break;
+                case 'BR':
+                    msg.push({t: MessagePairType.newLine});
+                    break;
+                case 'SPAN':
+                    if ($(t).hasClass('emoji')) {
+                        t.classList.forEach(v => {
+                            const emojiCodeString = XRegExp.cache('^emoji([0-9a-z]{4,5})$', 'uA');
+                            if (XRegExp.test(v, emojiCodeString)) {
+                                msg.push({
+                                    emojiCode: parseInt(XRegExp.exec(v, emojiCodeString)[1], 16),
+                                    t: MessagePairType.emoji
+                                });
+                            }
+                        })
+                    }
+                    break;
+                default:
+                    break;
+            }
+        });
+        if (msg.length > 0) {
+            return {
+                msg: msg,
+                ClientMsgId: scope.message.ClientMsgId,
+                CreateTime: scope.message.CreateTime,
+                MsgId: scope.message.MsgId,
+            };
+        }
+        return undefined;
+    }
+    return undefined;
+}
+
 async function onChat_do() {
 
     let title = detectCurrentChatTitle();
@@ -106,10 +216,43 @@ async function onChat_do() {
 
     console.log(msg);
 
+    // test
+    let m = getMessageFromAngularScop();
+    console.log(m);
+    if (m) {
+        if (!messageHistoryIdStorage.has(m.MsgId)) {
+            messageHistoryIdStorage.set(m.MsgId, m);
+            let opt = {
+                text: reduce(m.msg, (acc, v, i) => {
+                    switch (v.t) {
+                        case MessagePairType.emoji:
+                            return acc + String.fromCodePoint(v.emojiCode as number);
+                        // return acc + toUTF16(v.emojiCode as number);
+                        case MessagePairType.newLine:
+                            return acc + "\n";
+                        case MessagePairType.string:
+                            return acc + v.m;
+                        case MessagePairType.unknown:
+                            return acc;
+                        default:
+                            return acc;
+                    }
+                }, "")
+            };
+            pasteMsg(opt);
+            await clickSend(opt);
+        }
+    }
+    return;
+
     let waitingSendList: WaitingSendInfo[] = [];
     msg.forEach(IT => {
         let T = IT.text;
         console.log('msg.forEach');
+
+        // testEmojiCatchReg(T);
+        return;
+
         if (!carTeachStringAnalysis.checkMessage(T)) {
             console.log('checkMessage failed.');
             return;
@@ -159,10 +302,13 @@ async function onChat_do() {
 
         let line = -1;
         let targetHours = [
-            {begin: 14, end: 16,},
-            {begin: 16, end: 18,},
-            {begin: 12, end: 14,},
-            {begin: 10, end: 12,},
+            {begin: 10, end: 12, mode: 0,},
+            {begin: 17, end: 19, mode: 1,},
+            {begin: 12, end: 14, mode: 0,},
+            {begin: 13, end: 15, mode: 1,},
+            {begin: 14, end: 16, mode: 0,},
+            {begin: 15, end: 17, mode: 1,},
+            {begin: 16, end: 18, mode: 0,},
         ];
         let targetListMode: boolean = true;
         if (targetListMode) {

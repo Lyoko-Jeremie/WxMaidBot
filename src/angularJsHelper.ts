@@ -7,7 +7,7 @@ export function angularSelector(domPathSelector: JQElementParams): JQLite {
     return (window as any).angular.element(domPathSelector);
 }
 
-export function angularScope<T extends ng.IScope>(domPathSelector: string): T {
+export function angularScope<T extends ng.IScope>(domPathSelector: JQElementParams): T {
     return angularSelector(domPathSelector).scope();
 }
 

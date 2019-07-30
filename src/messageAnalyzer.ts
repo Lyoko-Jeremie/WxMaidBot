@@ -2,7 +2,8 @@ import _ from 'lodash';
 import XRegExp from 'xregexp';
 import moment from 'moment';
 import {remote} from 'electron';
-import {findIndexOfSingleNameCharAll, testHaveSingleNameChar} from './ChineseNameAnalysis';
+import {findIndexOfSingleNameCharAll} from './ChineseNameAnalysis';
+import {MessagePair, MessagePairType} from "./preload";
 
 const key_string = remote.process.env.KEY_String;
 
@@ -80,9 +81,12 @@ export namespace carTeachStringAnalysis {
     export  type AnalysisInfoType = [string[], Info[]];
     export  type SegmentInfoType = [{ month: number, day: number } | undefined, SegmentInfo[]];
 
-    export function analysisInfo(s: string): AnalysisInfoType {
-        let lines: string[] = XRegExp.split(s, '\n');
-        let infoTypes: Info[] = lines.map((T, I) => {
+    export function analysisInfo(mp: MessagePair[]): AnalysisInfoType {
+        let infoTypes: Info[] = mp.map((mpT: MessagePair, I) => {
+            const T = mpT.m;
+            if(mpT.t ===MessagePairType.emoji){
+
+            }
 
             let r1 = XRegExp.cache('欢迎各位学员参加练车培训');
             if (r1.test(T)) {
