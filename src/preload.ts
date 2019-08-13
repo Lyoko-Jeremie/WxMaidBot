@@ -5,12 +5,14 @@ import {s, sa, delay, download} from './util';
 import {parseMsg} from './parseMsg';
 import {replyMsg} from './replyMsg';
 import {Clipboard} from 'electron';
-import {isNil, parseInt, reduce} from 'lodash';
+import _, {isNil, parseInt, reduce, forEach} from 'lodash';
 import {ipcSendBackInfo} from "./preloadIpc";
 import {angularScope, angularSelector} from "./angularJsHelper";
 import {carTeachStringAnalysis} from "./messageAnalyzer";
 import {testEmojiCatchReg, toUTF16} from "./emojiParseHelper";
 import XRegExp from 'xregexp';
+import * as OuterXRegExp from "xregexp";
+import moment from "moment";
 
 
 console.log("XRegExp isInstalled astral? :", XRegExp.isInstalled('astral'));
@@ -113,6 +115,103 @@ export interface ScopeMessageInfo {
     ClientMsgId: string;
     MsgId: string;
     CreateTime: number;
+}
+
+const key_string = remote.process.env.KEY_String;
+
+export function checkOnScopeMessageMessagePair(s: ScopeMessageInfo): boolean {
+    let r3 = XRegExp.cache('(\\d+)月(\\d+)日练车安排时间表');
+    let date: { month: number, day: number } = {month: 0, day: 0};
+    forEach(s.msg, (T) => {
+        if (T.t === MessagePairType.string && T.m) {
+            if (r3.test(T.m)) {
+                let m = XRegExp.exec(T.m, r3, 0);
+                date = {
+                    month: _.parseInt(m[1]),
+                    day: _.parseInt(m[2]),
+                };
+            }
+        }
+    });
+
+    let nextDay = moment().add('1d');
+    let targetMonth = nextDay.month() + 1;
+    let targetDay = nextDay.date() + 1;
+    if (date.month === targetMonth && date.day === targetDay) {
+        return (reduce(s.msg, (Acc, T) => {
+            if (T.t === MessagePairType.newLine) {
+                ++Acc;
+            }
+            return Acc;
+        }, 0) > 5);
+    } else {
+        return false;
+    }
+}
+
+export function isFinallyOnScopeMessageMessagePair(s: ScopeMessageInfo): boolean {
+    return !!s.msg.find(T => {
+        if (T.t === MessagePairType.string && T.m) {
+            if (XRegExp.test(T.m, XRegExp.cache(key_string, 'g'))) {
+                console.log([true, T.m]);
+                return true;
+            }
+            console.log([false, T.m]);
+            return false;
+        }
+        return false;
+    });
+}
+
+export function insertIntoScopeMessageMessagePairFast(s: ScopeMessageInfo) {
+    // const keyFlagLastLineReg = '^14:00.{1,3}18:00.*';
+    const keyFlagLastLineReg = '^18:00.{1,3}21:00.*';
+    let isInserted = false;
+    let keyFindLine = -2;
+    let lineCount = 0;
+    let lastIsNewLine = true;
+    for (let i = 0; i != s.msg.length; ++i) {
+        if (isInserted) {
+            return s;
+        }
+        const T = s.msg[i];
+        switch (T.t) {
+            case MessagePairType.newLine:
+                ++lineCount;
+                break;
+            case MessagePairType.emoji:
+                // ignore
+                break;
+            case MessagePairType.unknown:
+                // ignore
+                break;
+            case MessagePairType.string:
+                if (T.m) {
+                    //debug
+                    // if (lastIsNewLine) {
+                    //     T.m = T.m + " ---" + lineCount;
+                    // }
+
+                    if (keyFindLine !== -2 && keyFindLine === lineCount - 1) {
+
+                        console.log('find!!!');
+                        T.m = key_string + ' ' + T.m;
+
+                        isInserted = true;
+                        return s;
+                    } else {
+                        if (XRegExp.test(T.m, XRegExp.cache(keyFlagLastLineReg, 'g'))) {
+                            keyFindLine = lineCount;
+                        }
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+        lastIsNewLine = (T.t === MessagePairType.newLine);
+    }
+    return s;
 }
 
 function getMessageFromAngularScop(): ScopeMessageInfo | undefined {
@@ -222,25 +321,37 @@ async function onChat_do() {
     if (m) {
         if (!messageHistoryIdStorage.has(m.MsgId)) {
             messageHistoryIdStorage.set(m.MsgId, m);
-            let opt = {
-                text: reduce(m.msg, (acc, v, i) => {
-                    switch (v.t) {
-                        case MessagePairType.emoji:
-                            return acc + String.fromCodePoint(v.emojiCode as number);
-                        // return acc + toUTF16(v.emojiCode as number);
-                        case MessagePairType.newLine:
-                            return acc + "\n";
-                        case MessagePairType.string:
-                            return acc + v.m;
-                        case MessagePairType.unknown:
-                            return acc;
-                        default:
-                            return acc;
-                    }
-                }, "")
-            };
-            pasteMsg(opt);
-            await clickSend(opt);
+
+            if (checkOnScopeMessageMessagePair(m)) {
+                console.log('checkOnScopeMessageMessagePair !');
+                if (!isFinallyOnScopeMessageMessagePair(m)) {
+                    console.log('!isFinallyOnScopeMessageMessagePair !');
+                    m = insertIntoScopeMessageMessagePairFast(m);
+                    console.log('!m!', m);
+
+
+                    // TO send
+                    let opt = {
+                        text: reduce(m.msg, (acc, v, i) => {
+                            switch (v.t) {
+                                case MessagePairType.emoji:
+                                    return acc + String.fromCodePoint(v.emojiCode as number);
+                                // return acc + toUTF16(v.emojiCode as number);
+                                case MessagePairType.newLine:
+                                    return acc + "\n";
+                                case MessagePairType.string:
+                                    return acc + v.m;
+                                case MessagePairType.unknown:
+                                    return acc;
+                                default:
+                                    return acc;
+                            }
+                        }, "")
+                    };
+                    pasteMsg(opt);
+                    await clickSend(opt);
+                }
+            }
         }
     }
     return;

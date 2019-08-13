@@ -84,22 +84,27 @@ export namespace carTeachStringAnalysis {
     export function analysisInfo(mp: MessagePair[]): AnalysisInfoType {
         let infoTypes: Info[] = mp.map((mpT: MessagePair, I) => {
             const T = mpT.m;
-            if(mpT.t ===MessagePairType.emoji){
+            if (mpT.t === MessagePairType.emoji) {
 
             }
 
             let r1 = XRegExp.cache('欢迎各位学员参加练车培训');
+            // @ts-ignore
             if (r1.test(T)) {
                 return new Info(InfoType.welcome, I);
             }
             let r2 = XRegExp.cache('^\\s*以下(?:时段|时间段)(?:可最多|最多可)约(\\d)+人.*$', 'uA');
+            // @ts-ignore
             if (r2.test(T)) {
                 return new Info(InfoType.userNumberLimit, I, {
+                    // @ts-ignore
                     userNumber: _.parseInt(XRegExp.exec(T, r2, 0)[1]),
                 }, T);
             }
             let r3 = XRegExp.cache('(\\d+)月(\\d+)日练车安排时间表');
+            // @ts-ignore
             if (r3.test(T)) {
+                // @ts-ignore
                 let m = XRegExp.exec(T, r3, 0);
                 return new Info(InfoType.date, I, {
                     month: _.parseInt(m[1]),
@@ -107,7 +112,9 @@ export namespace carTeachStringAnalysis {
                 }, T);
             }
             let r4 = XRegExp.cache('^\\s*(.(?:教练))\\s*(\\d{11})\\s*$', 'uA');
+            // @ts-ignore
             if (r4.test(T)) {
+                // @ts-ignore
                 let m = XRegExp.exec(T, r4, 0);
                 return new Info(InfoType.teacherLine, I, {
                     name: m[1],
@@ -115,14 +122,18 @@ export namespace carTeachStringAnalysis {
                 }, T);
             }
             let r5 = XRegExp.cache('监督投诉热线[^\\d]*(\\d{11})', 'uA');
+            // @ts-ignore
             if (r5.test(T)) {
+                // @ts-ignore
                 let m = XRegExp.exec(T, r5, 0);
                 return new Info(InfoType.serviceCall, I, {
                     phone: m[1],
                 }, T);
             }
             let r6 = XRegExp.cache('^\\s*((\\d+(?:\\.|:|：)00)\\s*(?:—|--|-)\\s*(\\d+(?:\\.|:|：)00))(.*)$', 'uA');
+            // @ts-ignore
             if (r6.test(T)) {
+                // @ts-ignore
                 let m = XRegExp.exec(T, r6, 0);
                 return new Info(InfoType.timeLine, I, {
                     ta: m[1],
@@ -133,7 +144,9 @@ export namespace carTeachStringAnalysis {
                 }, T);
             }
             let r7 = XRegExp.cache('^\\s*$', 'uA');
+            // @ts-ignore
             if (r7.test(T)) {
+                // @ts-ignore
                 let m = XRegExp.exec(T, r7, 0);
                 return new Info(InfoType.emptyLine, I, {}, T);
             }
@@ -142,6 +155,7 @@ export namespace carTeachStringAnalysis {
             return new Info(InfoType.unknow, I, {}, T);
         });
 
+        // @ts-ignore
         return [lines, infoTypes];
     }
 
