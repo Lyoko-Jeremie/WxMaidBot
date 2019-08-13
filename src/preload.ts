@@ -352,6 +352,8 @@ async function onChat_do() {
                     await clickSend(opt);
                 }
             }
+        }else {
+            await delay(100);
         }
     }
     return;
